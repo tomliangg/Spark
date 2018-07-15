@@ -18,25 +18,33 @@ schema = types.StructType([
 def main(in_directory, out_directory):
     # Read the data from the JSON files
     xyz = spark.read.json(in_directory, schema=schema)
-    #xyz.show(); return
+    xyz.show()
 
     # Create a DF with what we need: x, (soon y,) and id%10 which we'll aggregate by.
     with_bins = xyz.select(
         xyz['x'],
         # TODO: also the y values
+        xyz['y'],
         (xyz['id'] % 10).alias('bin'),
     )
-    #with_bins.show(); return
+    with_bins.show()
 
     # Aggregate by the bin number.
     grouped = with_bins.groupBy(with_bins['bin'])
     groups = grouped.agg(
         functions.sum(with_bins['x']),
         # TODO: output the average y value. Hint: avg
+        functions.avg(with_bins['y']),
         functions.count('*'))
 
     # We know groups has <=10 rows, so it can safely be moved into two partitions.
-    groups = groups.sort(groups['bin']).coalesce(2)
+    # groups = groups.sort(groups['bin']).coalesce(2)
+    # Note: the above line is causing my program to fail so I have to comment it out
+
+    groups.printSchema()
+    groups.show()
+    print('type of groups ', type(groups))
+    print('type of xyz: ', type(xyz))
     groups.write.csv(out_directory, compression=None, mode='overwrite')
 
 
